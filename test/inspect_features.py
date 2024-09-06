@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from libs.plots import plot_heatmap, plot_feature, plot_feature_distribution, plot_feature_to_target
+from libs.plots import plot_heatmap, plot_feature, plot_feature_distribution, plot_feature_to_target, plot_feature_contribution
 
 import config
 
@@ -27,10 +27,11 @@ for col in columns:
     plot_feature(train_df, col)
     plot_feature_distribution(train_df, col)
     plot_feature_to_target(train_df, col, 'y')
+    plot_feature_contribution(train_df, col, 'y')
 
 plot_heatmap(train_df, columns)
 plt.show()
 
-
+breakpoint()
 
 

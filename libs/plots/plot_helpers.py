@@ -37,12 +37,51 @@ def plot_feature_to_target(data, column, target):
     plt.grid(True)
     plt.show(block=False)
 
+def plot_feature_contribution(data, column, target, quantile=0.9, show_label=False):
+    theshhold = data[target].quantile(0.9)
+    data['yy'] = data[target].apply(lambda x: 1 if x > theshhold else 0)
+    # data[target] = data[target] > theshhold
+    # data[target] = data[target].astype(int)
+    # plt.rcParams["figure.figsize"] = (12,8)
+    fig,axs = plt.subplots(2,1)
+    ax = sns.histplot(
+        data=data, 
+        x=column, 
+        hue='yy', 
+        multiple='stack', 
+        ax=axs[0], 
+        shrink=.8
+    )
+    if show_label:
+        for bars in ax.containers:
+            heights = [b.get_height() for b in bars]
+            labels = [f'{h:.1f}' if h > 0.001 else '' for h in heights]
+            ax.bar_label(bars, labels=labels, label_type='center')
+    ax = sns.histplot(
+        data=data, 
+        x=column, 
+        hue='yy', 
+        multiple='fill', 
+        ax=axs[1], 
+        shrink=.8
+    )
+    if show_label:
+        for bars in ax.containers:
+            heights = [b.get_height() for b in bars]
+            labels = [f'{h:.1f}' if h > 0.001 else '' for h in heights]
+            ax.bar_label(bars, labels=labels, label_type='center')
+    ax.set_ylabel('ratio')
+    plt.tight_layout()
+    plt.show(block=False)
+    data.pop('yy')
+
+
 def heatmap(data):
     correlation_matrix = data.corr()
     plt.figure()
     sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', linewidths=0.5, fmt=".2f")
     plt.title('Feature Correlation Heatmap')
-    plt.show(block=False)
+    plt.show()
 
 def feature_graph(data, column_name):
     plt.figure()
