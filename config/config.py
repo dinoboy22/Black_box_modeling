@@ -1,0 +1,16 @@
+
+CAT_BOOST_RANDOM_STATE = 110
+CAT_BOOST_THRESHOLD = 0.5
+
+TEST_VAR=0.5
+LEARNING_RATE=1.0
+
+TORCH_LEARNING_RATE=0.01
+
+torch = {
+    'learning_rate': 0.01
+}
+
+TORCH = {
+    'LEARNING_RATE': 0.01
+}
