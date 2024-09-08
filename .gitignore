@@ -164,3 +164,7 @@ cython_debug/
 **/dataset/*
 !**/dataset/.gitkeep
 !**/dataset/.keep
+**/tb_logs/*
+!**/tb_logs/.keep
+**/models/*
+!**/models/.keep

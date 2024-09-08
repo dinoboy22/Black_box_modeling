@@ -6,13 +6,13 @@ import sys
 sys.path.append('./')
 sys.path.append('../')
 
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import libs.plots as myplt 
 
-from libs.plots import plot_heatmap, plot_feature, plot_feature_distribution, plot_feature_to_target, plot_feature_contribution
-
-import config
+# import numpy as np
+# from libs.plots import plot_heatmap, plot_feature, plot_feature_distribution, plot_feature_to_target, plot_feature_contribution
+# import config
 
 ROOT_DIR = '.' if os.path.exists('config') else '..' 
 train_csv = os.path.join(ROOT_DIR, 'dataset', 'train.csv')
@@ -24,14 +24,13 @@ train_df = train_df.drop(columns=['ID'])
 columns = ['x_0', 'x_1', 'x_2', 'x_3', 'x_4']
 
 for col in columns:
-    plot_feature(train_df, col)
-    plot_feature_distribution(train_df, col)
-    plot_feature_to_target(train_df, col, 'y')
-    plot_feature_contribution(train_df, col, 'y')
+    myplt.plot_feature(train_df, col)
+    myplt.plot_feature_distribution(train_df, col)
+    myplt.plot_feature_to_target(train_df, col, 'y')
+    myplt.plot_feature_contribution(train_df, col, 'y')
 
-plot_heatmap(train_df, columns)
+myplt.plot_heatmap(train_df, columns)
 plt.show()
 
-breakpoint()
 
 
