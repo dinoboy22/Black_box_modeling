@@ -8,7 +8,7 @@ sys.path.append('../')
 
 import lightning.pytorch as pl
 from lightning.pytorch.loggers import TensorBoardLogger
-from lightning.pytorch.callbacks import EarlyStopping
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 
 import config
 from libs.data_loader import BBDataModule
@@ -19,11 +19,46 @@ from libs.nn import BaselineModel
 # from torch.utils.data import Dataset, DataLoader, random_split, default_collate
 
 if __name__ == '__main__':
+    ## logger 셋팅
+    import logging
+    logging.basicConfig(
+        level=logging.INFO, 
+        format="%(asctime)s %(levelname)s \t %(message)s")
+    logger = logging.getLogger(__name__)
+
+    ## CLI 셋팅
+    import argparse
+    from argparse import BooleanOptionalAction
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--wide', default=False, action=BooleanOptionalAction, help='select wide model')
+    ap.add_argument('-f', '--file', help='train csv file')
+    ap.add_argument('-v', '--verbose', type=int, default=0, help='verbose level')
+    ap.add_argument('--debug', default=False, action=BooleanOptionalAction, help='debug message')
+
+    args = vars(ap.parse_args())
+    if args['verbose']:
+        logger.setLevel(logging.DEBUG)
+
+    if args['debug']:
+        # debugger 셋팅
+        import pdb
+        import rlcompleter
+        pdb.Pdb.complete=rlcompleter.Completer(locals()).complete
+        breakpoint() # pdb.set_trace()
+
+    logger.info("Started...")
+    logger.debug(f"Argument: {args}")
+
     # import freeze_support
     from multiprocessing import freeze_support
     freeze_support()
 
     cfg = config.BASELINE_MODEL
+    if args['wide']:
+        cfg = config.BASELINE_WIDE_MODEL
+
+    if args.get('file'):
+        cfg['train_csv_file'] = args['file']
 
     ROOT_DIR = '.' if os.path.exists('config') else '..' 
     csv_file = os.path.join(ROOT_DIR, 'dataset', cfg['train_csv_file'])
@@ -40,7 +75,7 @@ if __name__ == '__main__':
     # X, y = default_collate([testset[0]])
     # y_pred = model(X)
 
- 
+
     data_module = BBDataModule(
         csv_file=csv_file, 
         batch_size=cfg['batch_size'], 
@@ -48,14 +83,24 @@ if __name__ == '__main__':
     )
 
     log_dir = os.path.join(ROOT_DIR, 'tb_logs')
-    logger = TensorBoardLogger(log_dir, name="baseline")
+    logger = TensorBoardLogger(log_dir, name=cfg['label'])
+
+    checkpoint_dir = os.path.join(ROOT_DIR, 'models', cfg['label'])
+    checkpoint_callback = ModelCheckpoint(
+        monitor='val_loss',
+        dirpath=checkpoint_dir,
+        # filename='baseline-{epoch:02d}-{val_rmse:.2f}',
+        filename='{epoch:02d}-{val_rmse:.2f}',
+        save_top_k=3,
+        mode='min'
+    )
 
     trainer = pl.Trainer(
         # limit_train_batches=0.1, # use only 10% of the training data
         min_epochs=1,
         max_epochs=cfg['num_epochs'],
         precision='bf16-mixed',
-        callbacks=[EarlyStopping(monitor="val_loss")],
+        callbacks=[checkpoint_callback, EarlyStopping(monitor="val_loss")],
         logger=logger,
         # profiler=profiler,
         # profiler='simple'

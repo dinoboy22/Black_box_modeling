@@ -55,8 +55,8 @@ class BaselineModel(pl.LightningModule):
                 # 'train_accuracy': accuracy, 
                 # 'train_f1_score': f1_score
             },
-            on_step = False,
-            on_epoch = True,
+            on_step = True,
+            on_epoch = False,
             prog_bar = False,
         )
         # return {'loss': loss, 'y_pred': y_pred, 'y': y}
@@ -96,7 +96,7 @@ class BaselineModel(pl.LightningModule):
             },
             on_step = False,
             on_epoch = True,
-            prog_bar = False,
+            prog_bar = True,
         )
         return loss
 
