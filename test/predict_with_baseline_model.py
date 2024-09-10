@@ -6,27 +6,66 @@ import sys
 sys.path.append('./')
 sys.path.append('../')
 
+import numpy as np
+import pandas as pd
 import lightning.pytorch as pl
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.callbacks import EarlyStopping
+import pickle
 
 import config
 from libs.data_loader import BBDataModule
 from libs.nn import BaselineModel
-
-# import numpy as np
-# import pandas as pd
 # from torch.utils.data import Dataset, DataLoader, random_split, default_collate
 
 if __name__ == '__main__':
+    ## logger 셋팅
+    import logging
+    logging.basicConfig(
+        level=logging.INFO, 
+        format="%(asctime)s %(levelname)s \t %(message)s")
+    logger = logging.getLogger(__name__)
+
+    ## CLI 셋팅
+    import argparse
+    from argparse import BooleanOptionalAction
+    ap = argparse.ArgumentParser()
+    ap.add_argument('-f', '--file', default='test.csv', help='test csv file')
+    ap.add_argument('-v', '--verbose', type=int, default=0, help='verbose level')
+    ap.add_argument('--debug', default=False, action=BooleanOptionalAction, help='debug message')
+
+    args = vars(ap.parse_args())
+    if args['verbose']:
+        logger.setLevel(logging.DEBUG)
+
+    logger.info("Started...")
+    logger.debug(f"Argument: {args}")
+
     # import freeze_support
     from multiprocessing import freeze_support
-    freeze_support()
+    # freeze_support()
 
-    cfg = config.BASELINE_MODEL
+    # cfg = config.BASELINE_MODEL
 
     ROOT_DIR = '.' if os.path.exists('config') else '..' 
-    csv_file = os.path.join(ROOT_DIR, 'dataset', cfg['train_csv_file'])
+    test_csv_file = os.path.join(ROOT_DIR, 'dataset', 'test.csv')
+    test_df = pd.read_csv(test_csv_file)
+    test_df.pop('ID')
+    test_df.pop('y')
+
+    pt_file = os.path.join(ROOT_DIR, 'dataset', 'power_transformer.pkl')
+    with open(pt_file, 'rb') as f:
+        pt = pickle.load(f)
+
+    X_test = pt.transform(test_df.values)
+
+
+
+
+
+
+
+
     # csv_file = os.path.join(ROOT_DIR, 'dataset', 'train.csv')
 
     # model = BaselineModel(
@@ -70,3 +109,9 @@ if __name__ == '__main__':
 
 
 
+test_csv = os.path.join(ROOT_DIR, 'dataset', 'test.csv')
+# test_csv = os.path.join(ROOT_DIR, 'dataset', 'test_pt.csv')
+test_df = pd.read_csv(test_csv)
+X_test = torch.tensor(test_df.values).float()
+X_test = torch.tensor(test_df.values, dtype=torch.float32)
+        

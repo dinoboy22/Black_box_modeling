@@ -9,6 +9,7 @@ sys.path.append('../')
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import PowerTransformer
+import pickle
 import libs.plots as myplt
 import config
 
@@ -47,6 +48,7 @@ if __name__ == '__main__':
     train_id = train_df['ID']
     train_y = train_df['y'] 
 
+
     train_df.pop('ID')
     if not args['target']:
         train_df.pop('y')
@@ -55,6 +57,11 @@ if __name__ == '__main__':
     X_pt = pt.fit_transform(train_df.values)
     train_df_pt = pd.DataFrame(X_pt, columns=train_df.columns)
     # pt_lambdas = pd.DataFrame({'cols':train_df.columns , 'pt_lambdas': pt.lambdas_})
+
+    # # save the power transformer
+    # pickle.dump(pt, open(os.path.join(ROOT_DIR, 'dataset', 'power_transformer.pkl'), 'wb'))
+    #
+    # pt1 = pickle.load(open(os.path.join(ROOT_DIR, 'dataset', 'power_transformer.pkl'), 'rb'))
 
     # save the power transformed data
     train_df.insert(loc=0, column='ID', value=train_id.values)
@@ -69,14 +76,25 @@ if __name__ == '__main__':
         train_df_pt.to_csv(os.path.join(ROOT_DIR, 'dataset', 'train_pt_excl_y.csv'), index=False)
         print('Saved to train_pt_excl_y.csv')
 
-    # columns to inspect
-    # columns = train_df_pt.columns[1:] # except 'ID'
-    columns = ['x_0', 'x_1', 'x_2', 'x_3', 'x_4', 'y']
+    # # columns to inspect
+    # # columns = train_df_pt.columns[1:] # except 'ID'
+    # columns = ['x_0', 'x_1', 'x_2', 'x_3', 'x_4', 'y']
+    #
+    # for col in columns:
+    #     myplt.plot_feature_distribution(train_df, col)
+    #     myplt.plot_feature_distribution(train_df_pt, col)
+    #
+    # plt.show()
 
-    for col in columns:
-        myplt.plot_feature_distribution(train_df, col)
-        myplt.plot_feature_distribution(train_df_pt, col)
-
-    plt.show()
-
-
+    breakpoint()
+    test_csv = os.path.join(ROOT_DIR, 'dataset', 'test.csv')
+    test_df = pd.read_csv(test_csv)
+    test_id = test_df['ID']
+    test_df['y'] = train_y # dummy data 
+    test_df.pop('ID')
+    X_test_pt = pt.transform(test_df.values)
+    test_df_pt = pd.DataFrame(X_test_pt, columns=test_df.columns)
+    test_df_pt.insert(loc=0, column='ID', value=test_id.values)
+    test_df_pt['y'] = train_y # dummy data 
+    test_df_pt.to_csv(os.path.join(ROOT_DIR, 'dataset', 'test_pt.csv'), index=False)
+    print('Saved to test_pt.csv')

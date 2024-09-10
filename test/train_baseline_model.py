@@ -94,7 +94,7 @@ if __name__ == '__main__':
         min_epochs=1,
         max_epochs=cfg['num_epochs'],
         precision='bf16-mixed',
-        callbacks=[checkpoint_callback, EarlyStopping(monitor="val_loss")],
+        callbacks=[checkpoint_callback, EarlyStopping(patience=10, monitor="val_loss")],
         logger=logger,
         # profiler=profiler,
         # profiler='simple'
@@ -103,3 +103,10 @@ if __name__ == '__main__':
     trainer.fit(model, data_module)
     trainer.validate(model, data_module)
 
+    # # load the test datta (transformed)
+    # test_csv = os.path.join(ROOT_DIR, 'dataset', 'test_pt.csv')
+    # test_df = pd.read_csv(test_csv)
+    # test_df.pop('ID')
+    # test_df.pop('y')
+    # X_test = torch.tensor(test_df.values).float()
+    # model(X_test)

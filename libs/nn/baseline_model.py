@@ -15,13 +15,16 @@ class BaselineModel(pl.LightningModule):
 
         self.layers = []
         self.acts = []
+        self.bns = []
 
         for i in range(len(layers)-1):
             self.layers.append(nn.Linear(layers[i], layers[i+1]))
-            # self.acts.append(nn.ReLU())
-            self.acts.append(nn.Softplus())
+            self.bns.append(nn.BatchNorm1d(num_features=layers[i+1]))
+            self.acts.append(nn.ReLU())
+            # self.acts.append(nn.Softplus())
             self.add_module(f"layer{i}", self.layers[-1]) 
             self.add_module(f"act{i}", self.acts[-1])
+            self.add_module(f"bn{i}", self.bns[-1])
 
         self.dropout = nn.Dropout(dropout) 
         self.output = nn.Linear(layers[-1], num_output)
@@ -35,8 +38,11 @@ class BaselineModel(pl.LightningModule):
 
     def forward(self, x):
         x = x.view(x.size(0), -1)
-        for layer, act in zip(self.layers, self.acts):
-            x = self.dropout(act(layer(x)))
+        for layer, bn, act in zip(self.layers, self.bns, self.acts):
+            x = layer(x)
+            # x = bn(x)
+            x = act(x)
+            # x = self.dropout(act(bn(layer(x))))
 
         return self.output(x).squeeze()
 
@@ -121,12 +127,12 @@ class BaselineModel(pl.LightningModule):
         return y_pred
 
     def configure_optimizers(self):
-        # return optim.Adam(self.parameters(), lr=self.learning_rate)
-        return optim.SGD(
-            self.parameters(), 
-            lr=self.learning_rate, 
-            momentum=0.9, 
-            weight_decay=0.001
-        )
+        return optim.Adam(self.parameters(), lr=self.learning_rate)
+        # return optim.SGD(
+        #     self.parameters(), 
+        #     lr=self.learning_rate, 
+        #     momentum=0.9, 
+        #     weight_decay=0.001
+        # )
 
 

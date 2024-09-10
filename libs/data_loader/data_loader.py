@@ -25,6 +25,7 @@ class BBDataset(Dataset):
         y = row[-1] 
         return X, y
 
+
 class BBDataModule(pl.LightningDataModule):
     def __init__(self, csv_file, batch_size=32, num_workers=4):
         super().__init__()
