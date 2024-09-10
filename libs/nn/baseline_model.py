@@ -8,7 +8,7 @@ from torchmetrics import Metric
 
 
 class BaselineModel(pl.LightningModule):
-    def __init__(self, num_input, num_output, layers, dropout):
+    def __init__(self, num_input, num_output, layers, dropout, learning_rate):
         super().__init__()
 
         layers.insert(0, num_input)
@@ -18,7 +18,8 @@ class BaselineModel(pl.LightningModule):
 
         for i in range(len(layers)-1):
             self.layers.append(nn.Linear(layers[i], layers[i+1]))
-            self.acts.append(nn.ReLU())
+            # self.acts.append(nn.ReLU())
+            self.acts.append(nn.Softplus())
             self.add_module(f"layer{i}", self.layers[-1]) 
             self.add_module(f"act{i}", self.acts[-1])
 
@@ -30,6 +31,7 @@ class BaselineModel(pl.LightningModule):
         # self.accuracy = torchmetrics.Accuracy(task='multiclass', num_classes=10)
         # self.f1_score = torchmetrics.F1Score(task='multiclass', num_classes=10)
         self.training_step_outputs = []
+        self.learning_rate = learning_rate
 
     def forward(self, x):
         x = x.view(x.size(0), -1)
@@ -76,7 +78,7 @@ class BaselineModel(pl.LightningModule):
                 # 'train_accuracy': accuracy, 
                 # 'train_f1_score': f1_score
             },
-            prog_bar = False,
+            prog_bar = True,
         )
         self.training_step_outputs.clear()
 
@@ -94,8 +96,6 @@ class BaselineModel(pl.LightningModule):
                 # 'val_accuracy': accuracy, 
                 # 'val_f1_score': f1_score
             },
-            on_step = False,
-            on_epoch = True,
             prog_bar = True,
         )
         return loss
@@ -121,6 +121,12 @@ class BaselineModel(pl.LightningModule):
         return y_pred
 
     def configure_optimizers(self):
-        return optim.Adam(self.parameters(), lr=0.0001)
+        # return optim.Adam(self.parameters(), lr=self.learning_rate)
+        return optim.SGD(
+            self.parameters(), 
+            lr=self.learning_rate, 
+            momentum=0.9, 
+            weight_decay=0.001
+        )
 
 

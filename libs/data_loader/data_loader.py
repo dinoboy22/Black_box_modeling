@@ -10,7 +10,8 @@ from torch.utils.data import Dataset, DataLoader, random_split
 class BBDataset(Dataset):
     def __init__(self, csv_file, transform=None):
         self.df = pd.read_csv(csv_file)
-        self.df.pop('ID')
+        if 'ID' in self.df.columns:
+            self.df.pop('ID')
 
     def __len__(self):
         return len(self.df)

@@ -14,8 +14,8 @@ import config
 from libs.data_loader import BBDataModule
 from libs.nn import BaselineModel
 
-# import numpy as np
-# import pandas as pd
+import numpy as np
+import pandas as pd
 # from torch.utils.data import Dataset, DataLoader, random_split, default_collate
 
 if __name__ == '__main__':
@@ -39,19 +39,12 @@ if __name__ == '__main__':
     if args['verbose']:
         logger.setLevel(logging.DEBUG)
 
-    if args['debug']:
-        # debugger 셋팅
-        import pdb
-        import rlcompleter
-        pdb.Pdb.complete=rlcompleter.Completer(locals()).complete
-        breakpoint() # pdb.set_trace()
-
     logger.info("Started...")
     logger.debug(f"Argument: {args}")
 
     # import freeze_support
     from multiprocessing import freeze_support
-    freeze_support()
+    # freeze_support()
 
     cfg = config.BASELINE_MODEL
     if args['wide']:
@@ -62,19 +55,20 @@ if __name__ == '__main__':
 
     ROOT_DIR = '.' if os.path.exists('config') else '..' 
     csv_file = os.path.join(ROOT_DIR, 'dataset', cfg['train_csv_file'])
-    # csv_file = os.path.join(ROOT_DIR, 'dataset', 'train.csv')
+    df = pd.read_csv(csv_file)
+    np.testing.assert_equal(df.shape[1]-2, cfg['num_input'])
 
     model = BaselineModel(
         num_input=cfg['num_input'], 
         num_output=cfg['num_output'], 
         layers=cfg['layers'],
-        dropout=cfg['dropout']
+        dropout=cfg['dropout'],
+        learning_rate=cfg['learning_rate']
     ) 
     # print(model)
     # testset = BBDataset(csv_file=csv_file, transform=None)
     # X, y = default_collate([testset[0]])
     # y_pred = model(X)
-
 
     data_module = BBDataModule(
         csv_file=csv_file, 
@@ -85,14 +79,14 @@ if __name__ == '__main__':
     log_dir = os.path.join(ROOT_DIR, 'tb_logs')
     logger = TensorBoardLogger(log_dir, name=cfg['label'])
 
-    checkpoint_dir = os.path.join(ROOT_DIR, 'models', cfg['label'])
+    checkpoint_dir = os.path.join(ROOT_DIR, 'models')
+    checkpoint_filename = f'{cfg['label']}-v{logger.version}' + '-{epoch:02d}-{val_rmse:.2f}'
     checkpoint_callback = ModelCheckpoint(
         monitor='val_loss',
         dirpath=checkpoint_dir,
-        # filename='baseline-{epoch:02d}-{val_rmse:.2f}',
-        filename='{epoch:02d}-{val_rmse:.2f}',
+        filename=checkpoint_filename,
         save_top_k=3,
-        mode='min'
+        mode='min',
     )
 
     trainer = pl.Trainer(
