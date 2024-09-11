@@ -64,8 +64,23 @@ if __name__ == '__main__':
     X_test = pt.transform(test_df.values)
     X_test = X_test[:, :-1] # remove the dummy y
 
+    import re
+    import os
+    from simple_term_menu import TerminalMenu
+
+    checkpoint_dir = os.path.join(ROOT_DIR, 'models')
+    files = [file for file in [files for _,_,files in os.walk(checkpoint_dir)]]
+    model_files = [file for file in files[0] if re.search('ckpt$', file)]
+    model_files.sort()
+    # print(*model_files, sep='\n')
+
+    terminal_menu = TerminalMenu(model_files)
+    choice_index = terminal_menu.show()
+    checkpoint_file = model_files[choice_index]
+
     logger.info(f"Load the model and make the prediction")
-    checkpoint = os.path.join(ROOT_DIR, 'models', 'baseline_model.ckpt')
+    checkpoint = os.path.join(ROOT_DIR, 'models', checkpoint_file)
+    # checkpoint = os.path.join(ROOT_DIR, 'models', 'baseline_model.ckpt')
     model = BaselineModel.load_from_checkpoint(
         checkpoint,
         num_input=cfg['num_input'],
