@@ -8,7 +8,7 @@ from torchmetrics import Metric
 
 
 class BaselineModel(pl.LightningModule):
-    def __init__(self, num_input, num_output, layers, dropout, learning_rate):
+    def __init__(self, num_input=11, num_output=1, layers=[32,32,8], dropout=0.1, learning_rate=0.001):
         super().__init__()
 
         layers.insert(0, num_input)
@@ -46,21 +46,29 @@ class BaselineModel(pl.LightningModule):
 
         return self.output(x).squeeze()
 
+    def accuracy(self, y_pred, y_true):
+        diff = torch.abs(y_pred - y_true)        
+        y_abs = torch.abs(y_true)
+        diff = torch.min(diff, y_abs)
+        acc = (y_abs - diff) / y_abs
+        return torch.mean(acc)
+
     def training_step(self, batch, batch_idx):
         x, y = batch
         y_pred = self(x)
         loss = self.loss_fn(y_pred, y)
+        accuracy = self.accuracy(y_pred, y)
         self.training_step_outputs.append({
             'loss': loss, 
+            'accuracy': accuracy,
             # 'y_pred': y_pred, 
             # 'y': y
         })
-        # accuracy = self.accuracy(y_pred, y)
+        accuracy = self.accuracy(y_pred, y)
         # f1_score = self.f1_score(y_pred, y)
         self.log_dict(
             {
                 'train_loss': loss, 
-                # 'train_accuracy': accuracy, 
                 # 'train_f1_score': f1_score
             },
             on_step = True,
@@ -72,6 +80,7 @@ class BaselineModel(pl.LightningModule):
     #
     def on_train_epoch_end(self):
         avg_loss = torch.stack([x['loss'] for x in self.training_step_outputs]).mean()
+        avg_accuracy = torch.stack([x['accuracy'] for x in self.training_step_outputs]).mean()
         train_rmse = torch.sqrt(avg_loss)
         # y_pred = torch.cat([x['y_pred'] for x in self.training_step_outputs])
         # y = torch.cat([x['y'] for x in self.training_step_outputs])
@@ -80,8 +89,8 @@ class BaselineModel(pl.LightningModule):
         self.log_dict(
             {
                 'train_loss': avg_loss, 
-                'train_rmse': train_rmse
-                # 'train_accuracy': accuracy, 
+                'train_rmse': train_rmse,
+                'train_accuracy': avg_accuracy,
                 # 'train_f1_score': f1_score
             },
             prog_bar = True,
@@ -93,13 +102,13 @@ class BaselineModel(pl.LightningModule):
         y_pred = self(x)
         loss = self.loss_fn(y_pred, y)
         val_rmse = torch.sqrt(loss)
-        # accuracy = self.accuracy(y_pred, y)
+        accuracy = self.accuracy(y_pred, y)
         # f1_score = self.f1_score(y_pred, y)
         self.log_dict(
             {
                 'val_loss': loss, 
-                'val_rmse': val_rmse
-                # 'val_accuracy': accuracy, 
+                'val_rmse': val_rmse,
+                'val_accuracy': accuracy, 
                 # 'val_f1_score': f1_score
             },
             prog_bar = True,

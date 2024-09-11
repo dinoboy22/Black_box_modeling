@@ -7,15 +7,10 @@ sys.path.append('./')
 sys.path.append('../')
 
 import pandas as pd
-import matplotlib.pyplot as plt
 from sklearn.preprocessing import PowerTransformer
 import pickle
+import matplotlib.pyplot as plt
 import libs.plots as myplt
-import config
-
-# import numpy as np
-# from scipy import stats
-# import torchvision.transforms as transforms
 
 if __name__ == '__main__':
     ## logger 셋팅
@@ -29,7 +24,6 @@ if __name__ == '__main__':
     import argparse
     from argparse import BooleanOptionalAction
     ap = argparse.ArgumentParser()
-    ap.add_argument('-f', '--file', default='train.csv', help='select train csv file')
     ap.add_argument('--target', default=True, action=BooleanOptionalAction, help='include target column')
     ap.add_argument('-v', '--verbose', type=int, default=0, help='verbose level')
     ap.add_argument('--debug', default=False, action=BooleanOptionalAction, help='debug message')
@@ -41,60 +35,55 @@ if __name__ == '__main__':
     logger.info("Started...")
     logger.debug(f"Argument: {args}")
 
+    logger.info(f"Load the train data")
     ROOT_DIR = '.' if os.path.exists('config') else '..' 
-    train_csv = os.path.join(ROOT_DIR, 'dataset', args['file'])
+    train_csv = os.path.join(ROOT_DIR, 'dataset', 'train.csv')
     train_df = pd.read_csv(train_csv)
 
+    logger.debug("Save the ID and y columns temporarily")
     train_id = train_df['ID']
     train_y = train_df['y'] 
 
-
+    logger.debug(f"Opt out the ID and y columns (if necessary)")
     train_df.pop('ID')
-    if not args['target']:
-        train_df.pop('y')
 
+    logger.info(f"Apply the power transformer to the data")
     pt = PowerTransformer()
     X_pt = pt.fit_transform(train_df.values)
     train_df_pt = pd.DataFrame(X_pt, columns=train_df.columns)
-    # pt_lambdas = pd.DataFrame({'cols':train_df.columns , 'pt_lambdas': pt.lambdas_})
+    logger.debug("lambda_ : ", pt.lambdas_)
 
-    # # save the power transformer
-    # pickle.dump(pt, open(os.path.join(ROOT_DIR, 'dataset', 'power_transformer.pkl'), 'wb'))
-    #
-    # pt1 = pickle.load(open(os.path.join(ROOT_DIR, 'dataset', 'power_transformer.pkl'), 'rb'))
+    logger.info(f"Save the power transformer to power_transformer.pkl")
+    pickle.dump(
+        pt, 
+        open(os.path.join(ROOT_DIR, 'dataset', 'power_transformer.pkl'), 'wb')
+    )
+    # test - load the power transformer
+    # pt = pickle.load(open(os.path.join(ROOT_DIR, 'dataset', 'power_transformer.pkl'), 'rb'))
 
-    # save the power transformed data
+    logger.debug("Restore the ID")
     train_df.insert(loc=0, column='ID', value=train_id.values)
     train_df_pt.insert(loc=0, column='ID', value=train_id.values)
+    # train_df['y'] = train_y
+
+    logger.info(f"Save the power transformed data")
 
     if args['target']:
+        logger.info("train_pt.csv was created")
         train_df_pt.to_csv(os.path.join(ROOT_DIR, 'dataset', 'train_pt.csv'), index=False)
-        print('Saved to train_pt.csv')
     else:
-        train_df['y'] = train_y 
+        logger.info("train_pt_excl_y.csv was created")
         train_df_pt['y'] = train_y 
         train_df_pt.to_csv(os.path.join(ROOT_DIR, 'dataset', 'train_pt_excl_y.csv'), index=False)
-        print('Saved to train_pt_excl_y.csv')
 
-    # # columns to inspect
-    # # columns = train_df_pt.columns[1:] # except 'ID'
-    # columns = ['x_0', 'x_1', 'x_2', 'x_3', 'x_4', 'y']
-    #
-    # for col in columns:
-    #     myplt.plot_feature_distribution(train_df, col)
-    #     myplt.plot_feature_distribution(train_df_pt, col)
-    #
-    # plt.show()
+    logger.info("Comapred the original and power transformed data")
+    # columns to inspect
+    # columns = train_df_pt.columns[1:] # except 'ID'
+    columns = ['x_0', 'x_1', 'x_2', 'x_3', 'x_4', 'y']
 
-    breakpoint()
-    test_csv = os.path.join(ROOT_DIR, 'dataset', 'test.csv')
-    test_df = pd.read_csv(test_csv)
-    test_id = test_df['ID']
-    test_df['y'] = train_y # dummy data 
-    test_df.pop('ID')
-    X_test_pt = pt.transform(test_df.values)
-    test_df_pt = pd.DataFrame(X_test_pt, columns=test_df.columns)
-    test_df_pt.insert(loc=0, column='ID', value=test_id.values)
-    test_df_pt['y'] = train_y # dummy data 
-    test_df_pt.to_csv(os.path.join(ROOT_DIR, 'dataset', 'test_pt.csv'), index=False)
-    print('Saved to test_pt.csv')
+    for col in columns:
+        myplt.plot_feature_distribution(train_df, col)
+        myplt.plot_feature_distribution(train_df_pt, col)
+
+    plt.show()
+

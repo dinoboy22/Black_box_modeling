@@ -6,17 +6,18 @@ import sys
 sys.path.append('./')
 sys.path.append('../')
 
+import torch
 import lightning.pytorch as pl
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
+from torch.utils.data.dataloader import default_collate
 
 import config
-from libs.data_loader import BBDataModule
+from libs.data_loader import BBDataModule, BBDataset
 from libs.nn import BaselineModel
 
 import numpy as np
 import pandas as pd
-# from torch.utils.data import Dataset, DataLoader, random_split, default_collate
 
 if __name__ == '__main__':
     ## logger 셋팅
@@ -42,10 +43,11 @@ if __name__ == '__main__':
     logger.info("Started...")
     logger.debug(f"Argument: {args}")
 
-    # import freeze_support
-    from multiprocessing import freeze_support
+    # # import freeze_support
+    # from multiprocessing import freeze_support
     # freeze_support()
 
+    logger.info(f"Select model configuration")
     cfg = config.BASELINE_MODEL
     if args['wide']:
         cfg = config.BASELINE_WIDE_MODEL
@@ -55,9 +57,12 @@ if __name__ == '__main__':
 
     ROOT_DIR = '.' if os.path.exists('config') else '..' 
     csv_file = os.path.join(ROOT_DIR, 'dataset', cfg['train_csv_file'])
+
+    logger.info(f"Load the train dataset: {csv_file}")
     df = pd.read_csv(csv_file)
     np.testing.assert_equal(df.shape[1]-2, cfg['num_input'])
 
+    logger.info(f"Create BaselineModel instance")
     model = BaselineModel(
         num_input=cfg['num_input'], 
         num_output=cfg['num_output'], 
@@ -65,22 +70,33 @@ if __name__ == '__main__':
         dropout=cfg['dropout'],
         learning_rate=cfg['learning_rate']
     ) 
-    # print(model)
-    # testset = BBDataset(csv_file=csv_file, transform=None)
-    # X, y = default_collate([testset[0]])
-    # y_pred = model(X)
 
+    logger.debug(f"Model:\n{model}")
+    if args['debug']:
+        testset = BBDataset(csv_file=csv_file, transform=None)
+        X, y = default_collate([testset[0]])
+        model.eval()
+        with torch.no_grad():
+            y_pred = model(X)
+        logger.debug(f"y_pred: {y_pred.detach().numpy()}")
+        model.train()
+
+    logger.info(f"Create BBDataModule instance")
     data_module = BBDataModule(
         csv_file=csv_file, 
         batch_size=cfg['batch_size'], 
         num_workers=cfg['num_workers']
     )
 
+    logger.info(f"Make TensorBoardLogger at 'tb_logs' directory")
     log_dir = os.path.join(ROOT_DIR, 'tb_logs')
-    logger = TensorBoardLogger(log_dir, name=cfg['label'])
+    tb_logger = TensorBoardLogger(log_dir, name=cfg['label'])
 
+    logger.info("Make checkpoint directory at 'models' directory")
     checkpoint_dir = os.path.join(ROOT_DIR, 'models')
-    checkpoint_filename = f'{cfg['label']}-v{logger.version}' + '-{epoch:02d}-{val_rmse:.2f}'
+    checkpoint_filename = f'{cfg['label']}-v{tb_logger.version}' + '-{epoch:02d}-{val_rmse:.4f}'
+
+    logger.info("Create ModelCheckpoint and EarlyStopping callbacks")
     checkpoint_callback = ModelCheckpoint(
         monitor='val_loss',
         dirpath=checkpoint_dir,
@@ -89,24 +105,29 @@ if __name__ == '__main__':
         mode='min',
     )
 
+    early_stop_callback = EarlyStopping(
+        monitor='val_loss',
+        patience=5,
+        verbose=False,
+        mode='min'
+    )
+
+    logger.info("Create Trainer instance")
     trainer = pl.Trainer(
         # limit_train_batches=0.1, # use only 10% of the training data
         min_epochs=1,
         max_epochs=cfg['num_epochs'],
-        precision='bf16-mixed',
-        callbacks=[checkpoint_callback, EarlyStopping(patience=10, monitor="val_loss")],
-        logger=logger,
+        # precision='bf16-mixed',
+        # callbacks=[checkpoint_callback, early_stop_callback],
+        callbacks=[checkpoint_callback],
+        logger=tb_logger,
         # profiler=profiler,
         # profiler='simple'
     )
 
+    logger.info("Start fitting the model...")
     trainer.fit(model, data_module)
+
+    logger.info("Validate the model")
     trainer.validate(model, data_module)
 
-    # # load the test datta (transformed)
-    # test_csv = os.path.join(ROOT_DIR, 'dataset', 'test_pt.csv')
-    # test_df = pd.read_csv(test_csv)
-    # test_df.pop('ID')
-    # test_df.pop('y')
-    # X_test = torch.tensor(test_df.values).float()
-    # model(X_test)
