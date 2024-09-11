@@ -12,7 +12,7 @@ BASELINE_MODEL = {
     'num_output': 1,
     'layers': [32, 32, 8],
     # 'layers': [8, 8, 8],
-    'dropout': 0.0,
+    'dropout': 0.2,
     'loss_fn': 'MSELoss',
     'num_epochs': 100,
     'batch_size': 32,
