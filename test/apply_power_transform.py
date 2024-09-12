@@ -24,7 +24,7 @@ if __name__ == '__main__':
     import argparse
     from argparse import BooleanOptionalAction
     ap = argparse.ArgumentParser()
-    ap.add_argument('--target', default=True, action=BooleanOptionalAction, help='include target column')
+    ap.add_argument('--target', default=False, action=BooleanOptionalAction, help='include target column')
     ap.add_argument('-v', '--verbose', type=int, default=0, help='verbose level')
     ap.add_argument('--debug', default=False, action=BooleanOptionalAction, help='debug message')
 
@@ -35,9 +35,20 @@ if __name__ == '__main__':
     logger.info("Started...")
     logger.debug(f"Argument: {args}")
 
+
     logger.info(f"Load the train data")
     ROOT_DIR = '.' if os.path.exists('config') else '..' 
-    train_csv = os.path.join(ROOT_DIR, 'dataset', 'train.csv')
+    train_csv_dir = os.path.join(ROOT_DIR, 'dataset')
+    files = [file for file in [files for _,_,files in os.walk(train_csv_dir)]]
+    train_csv_files = [file for file in files[0] if re.search('^train(.)+csv$', file)]
+    train_csv_files.sort()
+    logger.info("Select the train file: ")
+    terminal_menu = TerminalMenu(train_csv_files)
+    choice_index = terminal_menu.show()
+    train_csv_file = train_csv_files[choice_index]
+    logger.info(f'Selected {train_csv_file}')
+
+    train_csv = os.path.join(ROOT_DIR, 'dataset', train_csv_file)
     train_df = pd.read_csv(train_csv)
 
     logger.debug("Save the ID and y columns temporarily")

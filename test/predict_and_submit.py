@@ -10,6 +10,9 @@ import numpy as np
 import pandas as pd
 import torch
 import pickle
+import re
+import os
+from simple_term_menu import TerminalMenu
 
 import config
 from libs.nn import BaselineModel
@@ -27,7 +30,7 @@ if __name__ == '__main__':
     from argparse import BooleanOptionalAction
     ap = argparse.ArgumentParser()
     ap.add_argument('--wide', default=False, action=BooleanOptionalAction, help='select wide model')
-    ap.add_argument('--target', default=True, action=BooleanOptionalAction, help='include target column')
+    ap.add_argument('--target', default=False, action=BooleanOptionalAction, help='include target column')
     ap.add_argument('-v', '--verbose', type=int, default=0, help='verbose level')
     ap.add_argument('--debug', default=False, action=BooleanOptionalAction, help='debug message')
 
@@ -64,10 +67,6 @@ if __name__ == '__main__':
     X_test = pt.transform(test_df.values)
     X_test = X_test[:, :-1] # remove the dummy y
 
-    import re
-    import os
-    from simple_term_menu import TerminalMenu
-
     checkpoint_dir = os.path.join(ROOT_DIR, 'models')
     files = [file for file in [files for _,_,files in os.walk(checkpoint_dir)]]
     model_files = [file for file in files[0] if re.search('ckpt$', file)]
@@ -88,14 +87,15 @@ if __name__ == '__main__':
         layers=cfg['layers'],
         dropout=cfg['dropout'],
         learning_rate=cfg['learning_rate']
-    )
+    ).to('cpu')
     X_test = torch.tensor(X_test, dtype=torch.float32)
-    logger.debug(f"Random test")
-    x_test = X_test[torch.randint(0, X_test.size(0), (1,))] 
-    model.eval()
-    with torch.no_grad():
-        y_pred = model(x_test)
-
+    # X_test = torch.tensor(X_test, dtype=torch.float32).to('mps')
+    # logger.debug(f"Random test")
+    # x_test = X_test[torch.randint(0, X_test.size(0), (1,))] 
+    # model.eval()
+    # with torch.no_grad():
+    #     y_pred = model(x_test)
+    #
     logger.info(f"Make the prediction for the test data")
     with torch.no_grad():
         y_pred = model(X_test)
@@ -107,6 +107,7 @@ if __name__ == '__main__':
         X_test = pt.inverse_transform(X_test)
         y_pred = X_test[:, -1]
     else: # exclude the target column
+        # y_pred = y_pred.cpu().numpy()
         y_pred = y_pred.numpy()
 
     logger.info(f"Make top 10% of the prediction to 1")
