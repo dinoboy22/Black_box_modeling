@@ -16,34 +16,39 @@ class BaselineModel(pl.LightningModule):
         self.layers = []
         self.acts = []
         self.bns = []
+        self.dos = []
 
         for i in range(len(layers)-1):
             self.layers.append(nn.Linear(layers[i], layers[i+1]))
             self.bns.append(nn.BatchNorm1d(num_features=layers[i+1]))
             self.acts.append(nn.ReLU())
+            self.dos.append(nn.Dropout(dropout))
             # self.acts.append(nn.Softplus())
             self.add_module(f"layer{i}", self.layers[-1]) 
             self.add_module(f"act{i}", self.acts[-1])
             self.add_module(f"bn{i}", self.bns[-1])
+            self.add_module(f"do{i}", self.dos[-1])
 
         self.dropout = nn.Dropout(dropout) 
         self.output = nn.Linear(layers[-1], num_output)
 
         self.loss_fn = nn.MSELoss()
-
-        # self.accuracy = torchmetrics.Accuracy(task='multiclass', num_classes=10)
-        # self.f1_score = torchmetrics.F1Score(task='multiclass', num_classes=10)
         self.training_step_outputs = []
         self.learning_rate = learning_rate
 
+        # self.accuracy = torchmetrics.Accuracy(task='multiclass', num_classes=10)
+        # self.f1_score = torchmetrics.F1Score(task='multiclass', num_classes=10)
+
     def forward(self, x):
         x = x.view(x.size(0), -1)
-        for layer, bn, act in zip(self.layers, self.bns, self.acts):
+        for layer, act, bn, do in zip(self.layers, self.acts, self.bns, self.dos):
             x = layer(x)
-            # x = bn(x)
             x = act(x)
-            # x = self.dropout(act(bn(layer(x))))
+            # x = bn(x)
+            x = do(x) 
+            # x = do(bn(act(layer(x))))
 
+        # x = self.dropout(x)
         return self.output(x).squeeze()
 
     def accuracy(self, y_pred, y_true):

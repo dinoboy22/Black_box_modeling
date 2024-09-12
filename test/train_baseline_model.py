@@ -34,7 +34,7 @@ if __name__ == '__main__':
     from argparse import BooleanOptionalAction
     ap = argparse.ArgumentParser()
     ap.add_argument('--wide', default=False, action=BooleanOptionalAction, help='select wide model')
-    ap.add_argument('-f', '--file', help='train csv file')
+    # ap.add_argument('-f', '--file', help='train csv file')
     ap.add_argument('-v', '--verbose', type=int, default=0, help='verbose level')
     ap.add_argument('--debug', default=False, action=BooleanOptionalAction, help='debug message')
 
@@ -54,13 +54,21 @@ if __name__ == '__main__':
     if args['wide']:
         cfg = config.BASELINE_WIDE_MODEL
 
-    if args.get('file'):
-        cfg['train_csv_file'] = args['file']
-
+    logger.info(f"Load the train data")
     ROOT_DIR = '.' if os.path.exists('config') else '..' 
-    csv_file = os.path.join(ROOT_DIR, 'dataset', cfg['train_csv_file'])
+    train_csv_dir = os.path.join(ROOT_DIR, 'dataset')
+    files = [file for file in [files for _,_,files in os.walk(train_csv_dir)]]
+    train_csv_files = [file for file in files[0] if re.search('^train(.)+csv$', file)]
+    train_csv_files.sort()
+    logger.info("Select the train file: ")
+    terminal_menu = TerminalMenu(train_csv_files)
+    choice_index = terminal_menu.show()
+    train_csv_file = train_csv_files[choice_index]
+    logger.info(f'Selected {train_csv_file}')
+    # if args.get('file'):
+    #     cfg['train_csv_file'] = args['file']
 
-    logger.info(f"Load the train dataset: {csv_file}")
+    csv_file = os.path.join(ROOT_DIR, 'dataset', cfg['train_csv_file'])
     df = pd.read_csv(csv_file)
     np.testing.assert_equal(df.shape[1]-2, cfg['num_input'])
 
@@ -120,8 +128,7 @@ if __name__ == '__main__':
         min_epochs=1,
         max_epochs=cfg['num_epochs'],
         # precision='bf16-mixed',
-        # callbacks=[checkpoint_callback, early_stop_callback],
-        callbacks=[checkpoint_callback],
+        callbacks=[checkpoint_callback, early_stop_callback],
         logger=tb_logger,
         # profiler=profiler,
         # profiler='simple'
